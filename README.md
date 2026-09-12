@@ -26,29 +26,16 @@ Built and tested against Tesla's SEC 10-K filing, and extended to support upload
 
 ## Architecture
 
+```mermaid
+graph TD
+    A[Streamlit Frontend] -->|HTTP request| B[FastAPI Backend]
+    B --> C[BM25 Index - keyword search]
+    B --> D[ChromaDB - vector search]
+    C --> E[Cross-Encoder Reranker]
+    D --> E
+    E --> F[Groq LLM - answer + citations]
+    F -->|HTTP response| A
 ```
-┌─────────────┐      HTTP       ┌──────────────┐
-│  Streamlit  │ ───────────────▶│   FastAPI    │
-│  (frontend) │◀─────────────── │   (backend)  │
-└─────────────┘                 └──────┬───────┘
-                                        │
-                     ┌──────────────────┼──────────────────┐
-                     ▼                  ▼                  ▼
-              ┌─────────────┐   ┌──────────────┐   ┌───────────────┐
-              │  BM25 Index │   │  ChromaDB    │   │  Cross-Encoder│
-              │  (keyword)  │   │  (vectors)   │   │  (reranker)   │
-              └─────────────┘   └──────────────┘   └───────────────┘
-                     │                  │                  │
-                     └──────────────────┴──────────────────┘
-                                        ▼
-                                 ┌─────────────┐
-                                 │  Groq LLM   │
-                                 │ (answer +   │
-                                 │  citations) │
-                                 └─────────────┘
-```
-
----
 
 ## Tech Stack
 
