@@ -1,4 +1,4 @@
-```markdown
+
 # 📊 Ask My Company Reports
 
 An **agentic RAG system** that answers questions about company financial reports (SEC 10-K filings and similar documents) with grounded, cited answers — built as a placement resume project, with a real evaluation suite, CI pipeline, and Docker deployment.
@@ -156,4 +156,3 @@ This project went through several real debugging cycles worth noting:
 - Eval accuracy: 60% → 75% → 100%, via fixing a Unicode-spacing scoring bug and switching to tolerance-based numeric matching instead of exact substring matching
 - Discovered and fixed recurring ChromaDB collection-name mismatches across scripts
 - Resolved a Docker build issue where `torch` pulled in unnecessary multi-hundred-MB NVIDIA CUDA packages (fixed by installing a CPU-only build explicitly)
-```
