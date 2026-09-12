@@ -77,3 +77,12 @@ for item in eval_set:
 
 accuracy = (correct / total) * 100
 print(f"\n=== RESULTS: {correct}/{total} correct ({accuracy:.1f}% accuracy) ===")
+
+# CI quality gate
+MIN_ACCURACY = 90.0
+
+if accuracy < MIN_ACCURACY:
+    print(f"❌ RAG evaluation failed: accuracy {accuracy:.1f}% is below {MIN_ACCURACY}%")
+    raise SystemExit(1)
+
+print(f"✅ RAG evaluation passed: accuracy {accuracy:.1f}% meets the {MIN_ACCURACY}% threshold")
