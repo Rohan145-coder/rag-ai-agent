@@ -28,13 +28,13 @@ Built and tested against Tesla's SEC 10-K filing, and extended to support upload
 
 ```mermaid
 graph TD
-    A[Streamlit Frontend] -->|HTTP request| B[FastAPI Backend]
-    B --> C[BM25 Index - keyword search]
-    B --> D[ChromaDB - vector search]
-    C --> E[Cross-Encoder Reranker]
+    A[Streamlit Frontend] --> B[FastAPI Backend]
+    B --> C[BM25 Index]
+    B --> D[ChromaDB Vector Search]
+    C --> E[Cross Encoder Reranker]
     D --> E
-    E --> F[Groq LLM - answer + citations]
-    F -->|HTTP response| A
+    E --> F[Groq LLM]
+    F --> A
 ```
 
 ## Tech Stack
