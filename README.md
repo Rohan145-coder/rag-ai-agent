@@ -26,16 +26,9 @@ Built and tested against Tesla's SEC 10-K filing, and extended to support upload
 
 ## Architecture
 
-**Flow:** Streamlit Frontend → FastAPI Backend → Retrieval → Reranker → Groq LLM → back to Frontend
+![Architecture diagram](architecture.svg)
 
-| Step | Component | Role |
-|---|---|---|
-| 1 | **Streamlit Frontend** | User uploads a PDF and asks a question |
-| 2 | **FastAPI Backend** | Receives the request over HTTP |
-| 3 | **BM25 Index** + **ChromaDB** | Run in parallel — keyword search and vector (semantic) search |
-| 4 | **Cross-Encoder Reranker** | Re-scores the combined results from step 3 for accuracy |
-| 5 | **Groq LLM** | Generates the final answer, with enforced citations |
-| 6 | **FastAPI → Streamlit** | Answer is sent back and displayed in the chat UI |
+**Flow:** Streamlit frontend → FastAPI backend → BM25 + ChromaDB (parallel hybrid search) → Cross-encoder reranker → Groq LLM → answer returned to frontend
 
 ## Tech Stack
 
