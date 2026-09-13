@@ -9,7 +9,17 @@ import chromadb
 from pypdf import PdfReader
 
 load_dotenv()
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# --- Fix: fail fast with a clear message if the API key is missing,
+# instead of a confusing error later when the first LLM call is made ---
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    raise RuntimeError(
+        "Missing GROQ_API_KEY. Create a .env file in the project root with:\n"
+        "GROQ_API_KEY=your_key_here\n"
+        "Get a free key at https://console.groq.com/keys"
+    )
+groq_client = Groq(api_key=GROQ_API_KEY)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 COLLECTION_NAME = "tesla_10k"
@@ -90,11 +100,27 @@ Rules:
 # ============================================================
 
 def build_pipeline_from_pdf(file_bytes, source_name="uploaded.pdf"):
-    """Builds a fresh chunk index + BM25 index + Chroma collection for ANY uploaded PDF."""
-    reader_ = PdfReader(io.BytesIO(file_bytes))
+    """Builds a fresh chunk index + BM25 index + Chroma collection for
+    ANY uploaded PDF. Raises ValueError with a clear message for bad
+    input (corrupted file, or a PDF with no extractable text) instead
+    of crashing deep inside with a confusing traceback."""
+
+    try:
+        reader_ = PdfReader(io.BytesIO(file_bytes))
+    except Exception as e:
+        raise ValueError(
+            f"Could not read '{source_name}' - it may be corrupted or password-protected."
+        ) from e
+
     full_text_ = ""
     for page in reader_.pages:
         full_text_ += page.extract_text() or ""
+
+    if not full_text_.strip():
+        raise ValueError(
+            f"No readable text found in '{source_name}'. It may be a scanned/image-only "
+            "PDF without OCR, or genuinely empty."
+        )
 
     pdf_chunks = chunk_text(full_text_)
     tokenized = [c.split() for c in pdf_chunks]

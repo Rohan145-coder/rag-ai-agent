@@ -21,10 +21,13 @@ if uploaded_file is not None and uploaded_file.name != st.session_state.current_
         response = requests.post(f"{API_URL}/upload", files=files)
         data = response.json()
 
-        st.session_state.session_id = data["session_id"]
-        st.session_state.current_file = uploaded_file.name
-        st.session_state.messages = []
-    st.success(f"Indexed {uploaded_file.name} — ask away!")
+        if "error" in data:
+            st.error(data["error"])
+        else:
+            st.session_state.session_id = data["session_id"]
+            st.session_state.current_file = uploaded_file.name
+            st.session_state.messages = []
+            st.success(f"Indexed {uploaded_file.name} — ask away!")
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -41,7 +44,8 @@ if st.session_state.session_id is not None:
             with st.spinner("Searching the document..."):
                 payload = {"session_id": st.session_state.session_id, "question": question}
                 response = requests.post(f"{API_URL}/ask-pdf", json=payload)
-                answer = response.json().get("answer", "Something went wrong.")
+                data = response.json()
+                answer = data.get("answer") or f"⚠️ {data.get('error', 'Something went wrong.')}"
             st.markdown(answer)
 
         st.session_state.messages.append({"role": "assistant", "content": answer})

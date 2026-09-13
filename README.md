@@ -1,4 +1,3 @@
-
 # 📊 Ask My Company Reports
 
 An **agentic RAG system** that answers questions about company financial reports (SEC 10-K filings and similar documents) with grounded, cited answers — built as a placement resume project, with a real evaluation suite, CI pipeline, and Docker deployment.
@@ -21,6 +20,8 @@ Built and tested against Tesla's SEC 10-K filing, and extended to support upload
 - **FastAPI backend + Streamlit frontend** — a real two-part architecture; the frontend talks to the backend over HTTP, not via direct function imports
 - **Dockerized** — both backend and frontend run as separate containers via Docker Compose, so the whole system runs identically on any machine
 - **Upload any PDF** — not limited to Tesla; any uploaded report gets its own fresh chunk index, BM25 index, and vector collection
+- **Session persistence** — uploaded PDFs are saved to disk, so sessions survive a backend restart
+- **Input validation & error handling** — clear error messages for empty/corrupted PDFs, oversized files, missing API keys, and invalid questions, instead of raw crashes
 
 ---
 
@@ -29,6 +30,8 @@ Built and tested against Tesla's SEC 10-K filing, and extended to support upload
 ![Architecture diagram](architecture.svg)
 
 **Flow:** Streamlit frontend → FastAPI backend → BM25 + ChromaDB (parallel hybrid search) → Cross-encoder reranker → Groq LLM → answer returned to frontend
+
+---
 
 ## Tech Stack
 
@@ -47,26 +50,40 @@ Built and tested against Tesla's SEC 10-K filing, and extended to support upload
 
 ---
 
+## Design Decisions
+
+| Decision | Why |
+|---|---|
+| Groq (not OpenAI) | Free tier, fast inference speed, good enough accuracy for this use case |
+| Hybrid search (BM25 + vectors), not vectors alone | Vector search alone misses exact terms (names, dollar figures); BM25 alone misses paraphrased questions |
+| Cross-encoder reranking | Hybrid search's raw ranking isn't always accurate — reranking measurably improved it (a correct chunk moved from rank 9 to rank 1-2 in testing) |
+| Tolerance-based numeric matching in eval | LLMs format numbers inconsistently ("$87.6 billion" vs "87,604 million") — exact string matching produced false failures on correct answers |
+| FastAPI + Streamlit (separate services) | Mirrors a real frontend/backend split, rather than one script mixing UI and logic |
+| Session files on disk (not Redis/a database) | Simple, sufficient for a single-user demo; a real multi-user deployment would need a proper database instead |
+
+---
+
 ## Project Structure
 
-```
 ├── data/
-│   └── tesla.pdf              # Tesla's SEC 10-K filing (fixed dataset)
-├── chroma_db/                 # Persistent vector store (generated, gitignored)
-├── rag_pipeline.py            # Core RAG logic: retrieval, reranking, answering, agentic loop
-├── api.py                     # FastAPI backend (endpoints: /ask, /upload, /ask-pdf)
-├── app.py                     # Streamlit frontend
-├── main.py                    # Builds the Tesla vector index
-├── eval_questions.py           # Evaluation question set
-├── run_eval.py                 # Runs the evaluation suite, reports accuracy
-├── test_agentic.py             # Manual test script for the agentic decision loop
+│ └── tesla.pdf # Tesla's SEC 10-K filing (fixed dataset)
+├── chroma_db/ # Persistent vector store (generated, gitignored)
+├── sessions/ # Saved uploaded PDFs, for session persistence (gitignored)
+├── rag_pipeline.py # Core RAG logic: retrieval, reranking, answering, agentic loop
+├── api.py # FastAPI backend (endpoints: /ask, /upload, /ask-pdf)
+├── app.py # Streamlit frontend
+├── main.py # Builds the Tesla vector index
+├── eval_questions.py # Evaluation question set
+├── run_eval.py # Runs the evaluation suite, reports accuracy
+├── test_agentic.py # Manual test script for the agentic decision loop
+├── architecture.svg # Architecture diagram
 ├── Dockerfile.backend
 ├── Dockerfile.frontend
 ├── docker-compose.yml
 ├── requirements.txt
-├── requirements-frontend.txt   # Lighter dependency set for the frontend container
-└── .github/workflows/eval.yml  # CI: rebuilds index + runs eval on every push
-```
+├── requirements-frontend.txt # Lighter dependency set for the frontend container
+└── .github/workflows/eval.yml # CI: rebuilds index + runs eval on every push
+
 
 ---
 
@@ -86,9 +103,10 @@ pip install -r requirements.txt
 
 Create a `.env` file in the project root:
 
-```
 GROQ_API_KEY=your_key_here
-```
+
+
+The app will fail immediately with a clear message on startup if this is missing.
 
 ### 3. Build the Tesla vector index
 
@@ -144,9 +162,10 @@ Ask it a question and it will show the decision trail — whether it answered di
 
 ## Known Limitations
 
-- Session state for uploaded PDFs is in-memory only — restarting the backend clears any previously uploaded documents
+- Session persistence uses simple file storage, not a database — fine for a single-user demo, but wouldn't scale to concurrent multi-user production traffic
 - The agentic decision loop is scoped specifically to retrieval decisions (search again / ask for clarification), not general multi-tool actions
 - No support for extracting or interpreting embedded images/charts within uploaded PDFs (attempted, rolled back due to reliability issues with vision-model rate limits)
+- No monitoring/metrics or structured logging — reasonable for a demo project, would be a real gap in an actual production deployment
 
 ---
 
