@@ -10,7 +10,7 @@ from pypdf import PdfReader
 
 load_dotenv()
 
-# --- Fix: fail fast with a clear message if the API key is missing,
+# --- Fail fast with a clear message if the API key is missing,
 # instead of a confusing error later when the first LLM call is made ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
@@ -50,6 +50,16 @@ collection = client.get_or_create_collection(name=COLLECTION_NAME)
 reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 
+SYSTEM_PROMPT = """You are a financial document assistant. Answer the user's question using ONLY the information in the sources provided below.
+
+Rules:
+1. Every fact in your answer MUST be followed by a citation like [Source 1] or [Source 2].
+2. If the sources don't contain the answer, say "I cannot find this information in the provided documents" — do NOT guess or use outside knowledge.
+3. Keep your answer concise and directly focused on the question.
+4. Financial documents often list several similarly-named line items close together (e.g., "Total automotive revenues" vs "Total automotive & services and other segment revenue"). When the question uses a specific term like "segment revenue", match it to the line item whose label most precisely and completely matches that term — do not substitute a shorter or more general-sounding line item with a similar name.
+"""
+
+
 def ask(question):
     """Takes a question, returns the final cited answer as a string.
     Wired to the fixed Tesla dataset. Used by main.py / run_eval.py / CI."""
@@ -75,19 +85,13 @@ def ask(question):
     for i, chunk in enumerate(top_chunks):
         context_text += f"\n[Source {i+1}]:\n{chunk}\n"
 
-    system_prompt = """You are a financial document assistant. Answer the user's question using ONLY the information in the sources provided below.
-
-Rules:
-1. Every fact in your answer MUST be followed by a citation like [Source 1] or [Source 2].
-2. If the sources don't contain the answer, say "I cannot find this information in the provided documents" — do NOT guess or use outside knowledge.
-3. Keep your answer concise and directly focused on the question.
-"""
     user_prompt = f"Sources:\n{context_text}\n\nQuestion: {question}\n\nAnswer with citations:"
 
     response = groq_client.chat.completions.create(
         model="openai/gpt-oss-120b",
+        temperature=0,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ]
     )
@@ -174,19 +178,13 @@ def ask_pdf(question, pipeline):
     for i, chunk in enumerate(top_chunks):
         context_text += f"\n[Source {i+1}]:\n{chunk}\n"
 
-    system_prompt = """You are a document assistant. Answer the user's question using ONLY the information in the sources provided below.
-
-Rules:
-1. Every fact in your answer MUST be followed by a citation like [Source 1] or [Source 2].
-2. If the sources don't contain the answer, say "I cannot find this information in the provided documents" — do NOT guess or use outside knowledge.
-3. Keep your answer concise and directly focused on the question.
-"""
     user_prompt = f"Sources:\n{context_text}\n\nQuestion: {question}\n\nAnswer with citations:"
 
     response = groq_client.chat.completions.create(
         model="openai/gpt-oss-120b",
+        temperature=0,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ]
     )
@@ -216,6 +214,7 @@ Respond with ONLY valid JSON, nothing else, in this exact shape:
 
     response = groq_client.chat.completions.create(
         model="openai/gpt-oss-120b",
+        temperature=0,
         messages=[{"role": "user", "content": prompt}]
     )
     raw = response.choices[0].message.content.strip()
@@ -239,6 +238,7 @@ Rewrite it as a more specific, keyword-rich search query that would retrieve bet
 
     response = groq_client.chat.completions.create(
         model="openai/gpt-oss-120b",
+        temperature=0,
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content.strip()
@@ -277,19 +277,13 @@ def ask_agentic(question, max_retries=1):
     for i, chunk in enumerate(top_chunks):
         context_text += f"\n[Source {i+1}]:\n{chunk}\n"
 
-    system_prompt = """You are a financial document assistant. Answer the user's question using ONLY the information in the sources provided below.
-
-Rules:
-1. Every fact in your answer MUST be followed by a citation like [Source 1] or [Source 2].
-2. If the sources don't contain the answer, say "I cannot find this information in the provided documents" — do NOT guess or use outside knowledge.
-3. Keep your answer concise and directly focused on the question.
-"""
     user_prompt = f"Sources:\n{context_text}\n\nQuestion: {question}\n\nAnswer with citations:"
 
     response = groq_client.chat.completions.create(
         model="openai/gpt-oss-120b",
+        temperature=0,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ]
     )
